@@ -300,7 +300,7 @@ class SMTP
         if ($code !== '334'){
             throw new CodeException('334', $code, array_pop($this->resultStack));
         }
-        $in = base64_encode($this->username . $this->password) . $this->CRLF;
+        $in = base64_encode("\0" . $this->username . "\0" . $this->password) . $this->CRLF;
         $code = $this->pushStack($in);
         if ($code !== '235'){
             throw new CodeException('235', $code, array_pop($this->resultStack));
