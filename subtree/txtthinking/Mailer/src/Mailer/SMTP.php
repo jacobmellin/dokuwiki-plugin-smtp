@@ -62,6 +62,11 @@ class SMTP
     protected $password;
 
     /**
+     * boolean indicating if AUTH PLAIN should be used instead of AUTH LOGIN
+     */
+    protected $isPlain = true;
+
+    /**
      * $this->CRLF
      * @var string
      */
@@ -135,6 +140,14 @@ class SMTP
     }
 
     /**
+     * set if SMTP AUTH PLAIN mechanism should be used instead of AUTH LOGIN
+     * @param $isPlain boolean indicating if AUTH PLAIN should be used instead of AUTH LOGIN
+     */
+    public function setPlain($isPlain) {
+        $this->isPLain = $isPlain;
+    }
+
+    /**
      * Send the message
      *
      * @param Message $message
@@ -153,11 +166,21 @@ class SMTP
             $this->starttls()
                 ->ehlo();
         }
-        $this->authLogin()
+
+        $authenticated;
+
+        if($this->isPlain) {
+            $authenticated->authPlain();
+        } else {
+            $authenticated->authLogin();
+        }
+
+        $authenticated
             ->mailFrom()
             ->rcptTo()
             ->data()
             ->quit();
+
         return fclose($this->smtp);
     }
 
@@ -248,6 +271,36 @@ class SMTP
             throw new CodeException('334', $code, array_pop($this->resultStack));
         }
         $in = base64_encode($this->password) . $this->CRLF;
+        $code = $this->pushStack($in);
+        if ($code !== '235'){
+            throw new CodeException('235', $code, array_pop($this->resultStack));
+        }
+        return $this;
+    }
+
+    /**
+     * SMTP AUTH PLAIN
+     * SUCCESS 334
+     * SUCCESS 334
+     * SUCCESS 235
+     * @return $this
+     * @throws CodeException
+     * @throws SMTPException
+     */
+    protected function authPlain()
+    {
+        if ($this->username === null && $this->password === null) {
+            // Unless the user has specifically set a username/password
+            // Do not try to authorize.
+            return $this;
+        }
+
+        $in = "AUTH PLAIN" . $this->CRLF;
+        $code = $this->pushStack($in);
+        if ($code !== '334'){
+            throw new CodeException('334', $code, array_pop($this->resultStack));
+        }
+        $in = base64_encode($this->username . $this->password) . $this->CRLF;
         $code = $this->pushStack($in);
         if ($code !== '235'){
             throw new CodeException('235', $code, array_pop($this->resultStack));
