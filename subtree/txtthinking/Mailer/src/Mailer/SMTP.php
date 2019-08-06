@@ -170,9 +170,9 @@ class SMTP
         $authenticated;
 
         if($this->isPlain) {
-            $authenticated->authPlain();
+            $authenticated = $this->authPlain();
         } else {
-            $authenticated->authLogin();
+            $authenticated = $this->authLogin();
         }
 
         $authenticated
